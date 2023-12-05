@@ -1,4 +1,6 @@
-module Main where
+module Main (main) where
+
+import Year2023.Day01.Solution qualified
 
 main :: IO ()
-main = putStrLn "Hello, Haskell!"
+main = Year2023.Day01.Solution.solve
