@@ -54,7 +54,7 @@ extra-doc-files:    CHANGELOG.md
 -- extra-source-files:
 
 data-files:         
-  data/year2023/day01.txt
+  data/**/*.txt
 
 common common-options
     ghc-options: -Wall
@@ -77,8 +77,9 @@ executable advent-of-code
     main-is:          Main.hs
 
     -- Modules included in this executable, other than Main.
-    other-modules: Year2023.Day01.Solution
-                 , Paths_advent_of_code
+    other-modules: Paths_advent_of_code
+                 , Year2023.Day01
+                 , Year2023.Day02
 
     -- LANGUAGE extensions used by modules in this package.
     other-extensions: OverloadedStrings
