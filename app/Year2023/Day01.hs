@@ -10,10 +10,10 @@ solve :: IO ()
 solve = do
   filename <- getDataFileName input
   file <- readFile filename
-  let part1Result = sum . map (getCalibrationValue . getDigits1) . lines $ file
-  print part1Result
-  let part2Result = sum . map (getCalibrationValue . getDigits2) . lines $ file
-  print part2Result
+  let part1Answer = sum . map (getCalibrationValue . getDigits1) . lines $ file
+  print $ "Day 1 Part 1 answer: " ++ show part1Answer
+  let part2Answer = sum . map (getCalibrationValue . getDigits2) . lines $ file
+  print $ "Day 1 Part 2 answer: " ++ show part2Answer
 
 getDigits1 :: String -> [Int]
 getDigits1 = map digitToInt . filter isDigit

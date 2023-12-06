@@ -24,6 +24,8 @@ data Round = Round {blueCubes :: Int, greenCubes :: Int, redCubes :: Int} derivi
 
 data MaxCubes = MaxCubes {maxBlueCubes :: Int, maxGreenCubes :: Int, maxRedCubes :: Int} deriving stock (Show)
 
+data MinCubes = MinCubes {minBlueCubes :: Int, minGreenCubes :: Int, minRedCubes :: Int} deriving stock (Show)
+
 data Game = Game {gameId :: Int, rounds :: [Round]} deriving stock (Show)
 
 solve :: IO ()
@@ -32,8 +34,20 @@ solve = do
   file <- readFile filename
   let maxCubes = MaxCubes {maxBlueCubes = 14, maxGreenCubes = 13, maxRedCubes = 12}
   let games = rights . map (parse pGame "") . lines $ file
-  let part1Result = sum . map gameId . filter (isValidGame maxCubes) $ games
-  print part1Result
+  let part1Answer = sum . map gameId . filter (isValidGame maxCubes) $ games
+  let part2Answer = sum . map (getPower . getMinCubes) $ games
+  print $ "Day 2 Part 1 answer: " ++ show part1Answer
+  print $ "Day 2 Part 2 answer: " ++ show part2Answer
+
+getPower :: MinCubes -> Int
+getPower MinCubes {minBlueCubes, minRedCubes, minGreenCubes} = minBlueCubes * minRedCubes * minGreenCubes
+
+getMinCubes :: Game -> MinCubes
+getMinCubes game = foldl step MinCubes {minBlueCubes = minBound, minRedCubes = minBound, minGreenCubes = minBound} (rounds game)
+  where
+    step :: MinCubes -> Round -> MinCubes
+    step MinCubes {minBlueCubes, minRedCubes, minGreenCubes} Round {blueCubes, redCubes, greenCubes} =
+      MinCubes {minBlueCubes = max minBlueCubes blueCubes, minGreenCubes = max minGreenCubes greenCubes, minRedCubes = max minRedCubes redCubes}
 
 isValidGame :: MaxCubes -> Game -> Bool
 isValidGame maxCubes = all (isValidRound maxCubes) . rounds
