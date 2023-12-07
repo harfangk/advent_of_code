@@ -80,6 +80,7 @@ executable advent-of-code
     other-modules: Paths_advent_of_code
                  , Year2023.Day01
                  , Year2023.Day02
+                 , Year2023.Day03
 
     -- LANGUAGE extensions used by modules in this package.
     other-extensions: OverloadedStrings
