@@ -50,11 +50,11 @@ solve = do
   let part1Almanac = parse (pAlmanac pPart1Seeds) "" file
   case part1Almanac of
     Right almanac ->
-      print ("Day 4 Part 1 answer: " ++ show (solve' almanac))
+      print ("Day 5 Part 1 answer: " ++ show (solve' almanac))
     Left _ -> print "Error parsing almanac"
   let part2Almanac = parse (pAlmanac pPart2Seeds) "" file
   case part2Almanac of
-    Right almanac -> print ("Day 4 Part 2 answer: " ++ show (solve' almanac))
+    Right almanac -> print ("Day 5 Part 2 answer: " ++ show (solve' almanac))
     Left _ -> print "Error parsing almanac"
 
 sc :: Parser ()
