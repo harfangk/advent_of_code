@@ -47,10 +47,14 @@ solve :: IO ()
 solve = do
   filename <- getDataFileName input
   file <- readFile filename
-  let almanac = parse pAlmanac "" file
-  case almanac of
-    Right almanac' ->
-      print ("Day 4 Part 1 answer: " ++ show (solvePart1 almanac'))
+  let part1Almanac = parse (pAlmanac pPart1Seeds) "" file
+  case part1Almanac of
+    Right almanac ->
+      print ("Day 4 Part 1 answer: " ++ show (solve' almanac))
+    Left _ -> print "Error parsing almanac"
+  let part2Almanac = parse (pAlmanac pPart2Seeds) "" file
+  case part2Almanac of
+    Right almanac -> print ("Day 4 Part 2 answer: " ++ show (solve' almanac))
     Left _ -> print "Error parsing almanac"
 
 sc :: Parser ()
@@ -59,8 +63,8 @@ sc = L.space (void eol) empty empty
 lexeme :: Parser a -> Parser a
 lexeme = L.lexeme sc
 
-solvePart1 :: Almanac -> Int
-solvePart1 almanac = minimum . map (step (categoryMaps almanac) [Seed, Soil, Fertilizer, Water, Light, Temperature, Humidity, Location]) . seeds $ almanac
+solve' :: Almanac -> Int
+solve' almanac = minimum . map (step (categoryMaps almanac) [Seed, Soil, Fertilizer, Water, Light, Temperature, Humidity, Location]) . seeds $ almanac
   where
     step :: CategoryMap -> [Category] -> Int -> Int
     step _ [] n = n
@@ -76,19 +80,34 @@ toNextStage categoryMap key target = findAnswer ((Map.!) categoryMap key) target
         Just (destinationStart', sourceStart', _range') -> target' - (sourceStart' - destinationStart')
         Nothing -> target'
 
-pAlmanac :: Parser Almanac
-pAlmanac = do
-  seeds <- pSeeds
+pAlmanac :: Parser [Int] -> Parser Almanac
+pAlmanac seedsParser = do
+  seeds <- seedsParser
   categoryMapRawData <- someTill pCategoryMap eof
   let map' = Map.fromList . map (\CategoryMapRawData {sourceCategory, destinationCategory, destinationSourceRanges} -> ((sourceCategory, destinationCategory), destinationSourceRanges)) $ categoryMapRawData
   pure Almanac {seeds = seeds, categoryMaps = map'}
 
-pSeeds :: Parser [Int]
-pSeeds = do
+pPart1Seeds :: Parser [Int]
+pPart1Seeds = do
   void (string "seeds: ")
   seeds <- some digitChar `sepEndBy1` space
   space
   pure (map read seeds)
+
+pPart2Seeds :: Parser [Int]
+pPart2Seeds = do
+  void (string "seeds: ")
+  seeds <- some digitChar `sepEndBy1` space
+  space
+  pure (spread . toTuple . map read $ seeds)
+  where
+    toTuple :: [a] -> [(a, a)]
+    toTuple [] = []
+    toTuple [_] = []
+    toTuple (s : r : rest) = (s, r) : toTuple rest
+    spread :: [(Int, Int)] -> [Int]
+    spread =
+      concatMap (\(start, range) -> [start .. (start + range - 1)])
 
 pCategoryMap :: Parser CategoryMapRawData
 pCategoryMap = lexeme $ do
