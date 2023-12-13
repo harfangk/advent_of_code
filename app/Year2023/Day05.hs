@@ -17,7 +17,7 @@ input = "app/data/year2023/day05.txt"
 
 type Parser = Parsec Void String
 
-data Category
+data Category a
   = Seed
   | Soil
   | Fertilizer
@@ -28,14 +28,23 @@ data Category
   | Location
   deriving stock (Show, Eq, Ord)
 
+data Source
+
+data Destination
+
 data CategoryMapRawData = CategoryMapRawData
-  { sourceCategory :: Category,
-    destinationCategory :: Category,
+  { sourceCategory :: Category Source,
+    destinationCategory :: Category Destination,
     destinationSourceRanges :: [(Int, Int, Int)]
   }
   deriving stock (Show)
 
-type CategoryMap = Map (Category, Category) [(Int, Int, Int)]
+type CategoryMap = Map (Category Source, Category Destination) [CategoryMapRanges]
+
+data CategoryMapRanges = CategoryMapRanges {sourceStart :: Int, sourceEnd :: Int, destinationStart :: Int, destinationEnd :: Int} deriving stock (Show, Eq)
+
+instance Ord CategoryMapRanges where
+  cmr1 `compare` cmr2 = sourceStart cmr1 `compare` sourceStart cmr2
 
 data Almanac = Almanac
   { seeds :: [Int],
@@ -64,28 +73,56 @@ lexeme :: Parser a -> Parser a
 lexeme = L.lexeme sc
 
 solve' :: Almanac -> Int
-solve' almanac = minimum . map (step (categoryMaps almanac) [Seed, Soil, Fertilizer, Water, Light, Temperature, Humidity, Location]) . seeds $ almanac
+solve' almanac = minimum . map (step (categoryMaps almanac) transformationOrder) . seeds $ almanac
   where
-    step :: CategoryMap -> [Category] -> Int -> Int
+    transformationOrder :: [(Category Source, Category Destination)] =
+      [ (Seed, Soil),
+        (Soil, Fertilizer),
+        (Fertilizer, Water),
+        (Water, Light),
+        (Light, Temperature),
+        (Temperature, Humidity),
+        (Humidity, Location)
+      ]
+    step :: CategoryMap -> [(Category Source, Category Destination)] -> Int -> Int
     step _ [] n = n
     step _ [_c] n = n
-    step categoryMap (source : destination : rest) n = step categoryMap (destination : rest) (toNextStage categoryMap (source, destination) n)
+    step categoryMap ((source, destination) : rest) n = step categoryMap rest (toNextStage categoryMap (source, destination) n)
 
-toNextStage :: CategoryMap -> (Category, Category) -> Int -> Int
+-- (Category Source a, Category Destination b) -> (Category Source b, Category Destination c) -> (Category Source a, Category Destination c)
+-- type Category a b = Category
+--
+
+toNextStage :: CategoryMap -> (Category Source, Category Destination) -> Int -> Int
 toNextStage categoryMap key target = findAnswer ((Map.!) categoryMap key) target
   where
-    findAnswer :: [(Int, Int, Int)] -> Int -> Int
+    findAnswer :: [CategoryMapRanges] -> Int -> Int
     findAnswer ranges target' =
-      case List.find (\(_destinationStart, sourceStart, range) -> sourceStart <= target' && target < sourceStart + range) ranges of
-        Just (destinationStart', sourceStart', _range') -> target' - (sourceStart' - destinationStart')
+      case List.find (\(CategoryMapRanges {sourceStart, sourceEnd}) -> sourceStart <= target' && target <= sourceEnd) ranges of
+        Just (CategoryMapRanges {sourceStart, destinationStart}) -> target' - (sourceStart - destinationStart)
         Nothing -> target'
 
 pAlmanac :: Parser [Int] -> Parser Almanac
 pAlmanac seedsParser = do
   seeds <- seedsParser
   categoryMapRawData <- someTill pCategoryMap eof
-  let map' = Map.fromList . map (\CategoryMapRawData {sourceCategory, destinationCategory, destinationSourceRanges} -> ((sourceCategory, destinationCategory), destinationSourceRanges)) $ categoryMapRawData
+  let map' = buildCategoryMap categoryMapRawData
   pure Almanac {seeds = seeds, categoryMaps = map'}
+
+buildCategoryMap :: [CategoryMapRawData] -> CategoryMap
+buildCategoryMap = Map.fromList . map buildKVList
+  where
+    buildKVList :: CategoryMapRawData -> ((Category Source, Category Destination), [CategoryMapRanges])
+    buildKVList CategoryMapRawData {sourceCategory, destinationCategory, destinationSourceRanges} =
+      ((sourceCategory, destinationCategory), map processRanges destinationSourceRanges)
+    processRanges :: (Int, Int, Int) -> CategoryMapRanges
+    processRanges (destinationStart, sourceStart, range) =
+      CategoryMapRanges
+        { destinationStart = destinationStart,
+          sourceStart = sourceStart,
+          destinationEnd = destinationStart + range - 1,
+          sourceEnd = sourceStart + range - 1
+        }
 
 pPart1Seeds :: Parser [Int]
 pPart1Seeds = do
@@ -119,7 +156,7 @@ pCategoryMap = lexeme $ do
   destinationSourceRanges <- pDestinationSourceRanges `sepEndBy1` eol
   pure CategoryMapRawData {sourceCategory = sourceCategory, destinationCategory = destinationCategory, destinationSourceRanges = destinationSourceRanges}
   where
-    pCategory :: Parser Category
+    pCategory :: Parser (Category a)
     pCategory =
       choice
         [ Soil <$ string "soil",
@@ -135,3 +172,23 @@ pCategoryMap = lexeme $ do
     pDestinationSourceRanges = do
       [destinationStart, sourceStart, range] <- some digitChar `sepBy1` hspace
       pure (read destinationStart, read sourceStart, read range)
+
+mergeCategoryMaps :: CategoryMap -> CategoryMap -> CategoryMap
+mergeCategoryMaps cm1 cm2 = cm1
+  where
+    dsrs1 = destinationSourceRanges cmrd1
+    dsrs2 = destinationSourceRanges cmrd2
+    newRanges = concatMap (step dsrs2) dsrs1
+      where
+        step :: [(Int, Int, Int)] -> (Int, Int, Int) -> [(Int, Int, Int)]
+        step dsrs2' dsrs1' = concatMap (mapper dsrs1') dsrs2'
+          where
+            mapper :: (Int, Int, Int) -> (Int, Int, Int) -> [(Int, Int, Int)]
+            mapper (d1, s1, r1) (d2, s2, r2)
+              | s2 <= d1 && d1 + r1 < s2 + r2 = [(d2, s1, r1)]
+              | s2 <= d1 = []
+              | d1 < s2 + r2 = []
+              | otherwise = []
+
+-- If a subrange SubD1n within D1n overlaps with any of subranges SubS2m within S2m,
+-- source of SubD1n should point to SubD2m
