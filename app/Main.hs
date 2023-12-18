@@ -13,4 +13,5 @@ main = do
   Year2023.Day02.solve
   Year2023.Day03.solve
   Year2023.Day04.solve
+  Year2023.Day05.solve
   Year2023.Day06.solve
