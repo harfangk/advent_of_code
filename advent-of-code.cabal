@@ -85,6 +85,8 @@ executable advent-of-code
                  , Year2023.Day05
                  , Year2023.Day06
                  , Year2023.Day07
+                 , Year2023.Day07.Part1
+                 , Year2023.Day07.Part2
 
     -- LANGUAGE extensions used by modules in this package.
     other-extensions: OverloadedStrings
