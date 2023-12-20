@@ -7,6 +7,7 @@ import Year2023.Day04 qualified
 import Year2023.Day05 qualified
 import Year2023.Day06 qualified
 import Year2023.Day07 qualified
+import Year2023.Day08 qualified
 
 main :: IO ()
 main = do
@@ -17,3 +18,4 @@ main = do
   Year2023.Day05.solve
   Year2023.Day06.solve
   Year2023.Day07.solve
+  Year2023.Day08.solve

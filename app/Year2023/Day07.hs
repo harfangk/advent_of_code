@@ -1,5 +1,3 @@
-{-# LANGUAGE DerivingStrategies #-}
-
 module Year2023.Day07 (solve) where
 
 import Paths_advent_of_code (getDataFileName)
