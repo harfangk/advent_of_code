@@ -46,10 +46,13 @@ solvePart1 :: [[Int]] -> Int
 solvePart1 = sum . map (getNextValue . buildDiffLists)
 
 solvePart2 :: [[Int]] -> Int
-solvePart2 report = 0
+solvePart2 = sum . map (getPrevValue . buildDiffLists)
 
 getNextValue :: [[Int]] -> Int
 getNextValue = foldr (\x acc -> last x + acc) 0
+
+getPrevValue :: [[Int]] -> Int
+getPrevValue = foldr (\x acc -> head x - acc) 0
 
 buildDiffLists :: [Int] -> [[Int]]
 buildDiffLists = takeWhile (not . all (== 0)) . iterate buildDiffList
