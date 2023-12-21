@@ -28,11 +28,18 @@ solve = do
   file <- readFile filename
   let day10Input = parse pInput filename file
   case day10Input of
-    Right day10Input' -> print ("Day 10 Part 1 answer: " ++ show (solvePart1 day10Input'))
+    Right day10Input' -> do
+      print ("Day 10 Part 1 answer: " ++ show (solvePart1 day10Input'))
+      print ("Day 10 Part 2 answer: " ++ show (solvePart2 day10Input'))
     Left _ -> print "Day 10 error parsing file"
 
 solvePart1 :: (Coord, Grid) -> Int
 solvePart1 (sCoord, grid) = div (maybe 0 length (traverseLoop grid sCoord N)) 2
+
+solvePart2 :: (Coord, Grid) -> Int
+solvePart2 (sCoord, grid) = case traverseLoop grid sCoord N of
+  Nothing -> 0
+  Just path -> inversedPick (shoelace path) (length path)
 
 traverseLoop :: Grid -> Coord -> Direction -> Maybe [Coord]
 traverseLoop grid (x, y) nextDir =
@@ -81,3 +88,9 @@ rowsToGrid rows =
     | (y, row) <- zip [0 ..] rows
     , (x, tile) <- zip [0 ..] row
     ]
+
+shoelace :: [Coord] -> Int
+shoelace coords = div (abs . sum . zipWith (\(x, y) (x', y') -> (x - x') * (y + y')) coords $ tail coords) 2
+
+inversedPick :: Int -> Int -> Int
+inversedPick area boundaryPoints = area - div boundaryPoints 2 + 1
