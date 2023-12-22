@@ -1,11 +1,10 @@
 {-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE LambdaCase #-}
 
 module Year2023.Day10 (solve) where
 
 import Control.Applicative (liftA2)
 import Data.Map (Map)
-import Data.Map qualified as Map (filter, fromList, keys, lookup)
+import Data.Map qualified as Map (filter, fromList, keys, lookup, (!))
 import Data.Void (Void)
 import Paths_advent_of_code (getDataFileName)
 import Text.Megaparsec (Parsec, oneOf, parse, sepEndBy1, some)
@@ -34,40 +33,56 @@ solve = do
     Left _ -> print "Day 10 error parsing file"
 
 solvePart1 :: (Coord, Grid) -> Int
-solvePart1 (sCoord, grid) = div (maybe 0 length (traverseLoop grid sCoord N)) 2
+solvePart1 (sCoord, grid) = div (maybe 0 length (traverseL grid sCoord N)) 2
 
 solvePart2 :: (Coord, Grid) -> Int
-solvePart2 (sCoord, grid) = case traverseLoop grid sCoord N of
+solvePart2 (sCoord, grid) = case traverseL grid sCoord N of
   Nothing -> 0
-  Just path -> inversedPick (shoelace path) (length path)
+  Just path -> div (shoelace path - length path + 3) 2
 
-traverseLoop :: Grid -> Coord -> Direction -> Maybe [Coord]
-traverseLoop grid (x, y) nextDir =
-  case nextDir of
-    E ->
-      Map.lookup (x + 1, y) grid >>= \case
-        '-' -> liftA2 (:) (Just (x, y)) (traverseLoop grid (x + 1, y) E)
-        'J' -> liftA2 (:) (Just (x, y)) (traverseLoop grid (x + 1, y) N)
-        '7' -> liftA2 (:) (Just (x, y)) (traverseLoop grid (x + 1, y) S)
-        _ -> Just [(x, y)]
-    W ->
-      Map.lookup (x - 1, y) grid >>= \case
-        '-' -> liftA2 (:) (Just (x, y)) (traverseLoop grid (x - 1, y) W)
-        'L' -> liftA2 (:) (Just (x, y)) (traverseLoop grid (x - 1, y) N)
-        'F' -> liftA2 (:) (Just (x, y)) (traverseLoop grid (x - 1, y) S)
-        _ -> Just [(x, y)]
-    S ->
-      Map.lookup (x, y + 1) grid >>= \case
-        '|' -> liftA2 (:) (Just (x, y)) (traverseLoop grid (x, y + 1) S)
-        'L' -> liftA2 (:) (Just (x, y)) (traverseLoop grid (x, y + 1) E)
-        'J' -> liftA2 (:) (Just (x, y)) (traverseLoop grid (x, y + 1) W)
-        _ -> Just [(x, y)]
-    N ->
-      Map.lookup (x, y - 1) grid >>= \case
-        '|' -> liftA2 (:) (Just (x, y)) (traverseLoop grid (x, y - 1) N)
-        '7' -> liftA2 (:) (Just (x, y)) (traverseLoop grid (x, y - 1) W)
-        'F' -> liftA2 (:) (Just (x, y)) (traverseLoop grid (x, y - 1) E)
-        _ -> Just [(x, y)]
+connect :: Grid -> (Char -> Bool) -> Coord -> Maybe Coord
+connect grid c coord = Map.lookup coord grid >>= \t -> if c t then Just coord else Nothing
+
+connectNorth :: Char -> Bool
+connectNorth = (`elem` "|F7S")
+
+connectSouth :: Char -> Bool
+connectSouth = (`elem` "|LJS")
+
+connectEast :: Char -> Bool
+connectEast = (`elem` "-7JS")
+
+connectWest :: Char -> Bool
+connectWest = (`elem` "-FLS")
+
+traverseL :: Grid -> Coord -> Direction -> Maybe [Coord]
+traverseL grid (x, y) dir = case dir of
+  E ->
+    connect grid connectEast (x + 1, y) >>= \c -> case grid Map.! c of
+      '-' -> doTraverseL grid c E
+      '7' -> doTraverseL grid c S
+      'J' -> doTraverseL grid c N
+      _ -> Just [c]
+  W ->
+    connect grid connectWest (x - 1, y) >>= \c -> case grid Map.! c of
+      '-' -> doTraverseL grid c W
+      'F' -> doTraverseL grid c S
+      'L' -> doTraverseL grid c N
+      _ -> Just [c]
+  N ->
+    connect grid connectNorth (x, y - 1) >>= \c -> case grid Map.! c of
+      '|' -> doTraverseL grid c N
+      'F' -> doTraverseL grid c E
+      '7' -> doTraverseL grid c W
+      _ -> Just [c]
+  S ->
+    connect grid connectSouth (x, y + 1) >>= \c -> case grid Map.! c of
+      '|' -> doTraverseL grid c S
+      'J' -> doTraverseL grid c W
+      'L' -> doTraverseL grid c E
+      _ -> Just [c]
+  where
+    doTraverseL g c d = liftA2 (:) (Just c) (traverseL g c d)
 
 pInput :: Parser (Coord, Grid)
 pInput = do
@@ -85,12 +100,9 @@ rowsToGrid :: [String] -> Grid
 rowsToGrid rows =
   Map.fromList
     [ ((x, y), tile)
-    | (y, row) <- zip [0 ..] rows
-    , (x, tile) <- zip [0 ..] row
+      | (y, row) <- zip [0 ..] rows,
+        (x, tile) <- zip [0 ..] row
     ]
 
 shoelace :: [Coord] -> Int
-shoelace coords = div (abs . sum . zipWith (\(x, y) (x', y') -> (x - x') * (y + y')) coords $ tail coords) 2
-
-inversedPick :: Int -> Int -> Int
-inversedPick area boundaryPoints = area - div boundaryPoints 2 + 1
+shoelace coords = abs . sum . zipWith (\(x, y) (x', y') -> (x - x') * (y + y')) coords $ tail coords
